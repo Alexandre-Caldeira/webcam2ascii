@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Webcam to ASCII</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      #output {
+        font-size: 8px;
+        white-space: pre;
+        text-align: center;
+        transform: translate(-50%, -50%);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin: auto;
+      }
+      video {
+        -webkit-transform: scaleX(-1);
+        transform: scaleX(-1);
+    }
+    </style>
+  </head>
+  <body>
+    <pre id="output"></pre>
+    <video id="video" width="640" height="480"></video>
+
+    <script>
+      const video = document.getElementById('video');
+      const output = document.getElementById('output');
+      const asciiChars = [' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'];
+
+      // get webcam stream
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+          video.play();
+        });
+
+      // convert video frames to ASCII and display in <pre> element
+        function convertToASCII() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+        let ascii = '';
+        const asciiWidth = Math.floor(output.clientWidth / 4);
+        const asciiHeight = Math.floor(output.clientHeight / 8);
+        const scaleX = canvas.width / asciiWidth;
+        const scaleY = canvas.height / asciiHeight;
+        for (let y = 0; y < asciiHeight; y++) {
+            for (let x = 0; x < asciiWidth; x++) {
+            const pixelX = Math.floor(x * scaleX);
+            const pixelY = Math.floor(y * scaleY);
+            const pixelIndex = (pixelY * canvas.width + pixelX) * 4;
+            const r = imageData[pixelIndex];
+            const g = imageData[pixelIndex + 1];
+            const b = imageData[pixelIndex + 2];
+            const brightness = (r + g + b) / 3;
+            const index = Math.floor(brightness / 25.5);
+            const character = asciiChars[index];
+            
+            ascii += character; //.repeat(2);
+            }
+            ascii += '\n';
+        }
+
+        output.textContent = ascii;
+        requestAnimationFrame(convertToASCII);
+        }
+
+
+      // start converting video to ASCII
+      video.addEventListener('canplay', () => {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const aspectRatio = video.videoWidth / video.videoHeight;
+        const asciiWidth = Math.floor(height * aspectRatio / 4) * 4;
+        const asciiHeight = Math.floor(height / 8) * 8;
+        output.style.width = asciiWidth + 'px';
+        output.style.height = asciiHeight + 'px';
+        output.style.top = '50%';
+        output.style.left = '50%';
+        output.style.transform = 'translate(-50%, -50%)';
+        requestAnimationFrame(convertToASCII);
+      });
+    </script>
+  </body>
+</html>
